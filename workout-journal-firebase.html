@@ -215,7 +215,7 @@ if(['running','swimming','cycling'].includes(U.sc)){const wd=R.filter(w=>w.st&&w
 if((U.sc==='basketball'||U.sc==='football')&&G.length)SPORTS[U.sc].fg.forEach(k=>{const v=avg(k,G);if(v!=null)rows.push([t(k)+t('perG'),v.toFixed(1)])});
 if(U.sc==='basketball'){const fa=sum('fta');if(fa)rows.push([t('ftl'),Math.round(sum('ftm'))+'/'+fa+' ('+Math.round(sum('ftm')/fa*100)+'%)'])}return rows}
 function bars(d){const W=320,H=110,n=d.length,bw=W/n,mx=Math.max(1,...d.map(x=>x.c)),lastI=L()==='he'?0:n-1;
-return `<svg class="ch" viewBox="0 0 ${W} ${H+22}">${d.map((x,i)=>{const h=Math.max(x.c?6:3,x.c/mx*(H-18)),cx=i*bw+bw/2;return `<rect x="${cx-bw*.26}" y="${H-h}" width="${bw*.52}" height="${h}" rx="6" class="${i===lastI?'a':'b'}"/><text x="${cx}" y="${H+15}" text-anchor="middle">${x.l}</text>${x.c?`<text class="v" x="${cx}" y="${H-h-5}" text-anchor="middle">${x.c}</text>`:''}`}).join('')}</svg>`}
+return `<svg class="ch" viewBox="0 0 ${W} ${H+22}">${d.map((x,i)=>{const h=Math.max(x.c?6:3,x.c/mx*(H-18)),cx=i*bw+bw/2;return `<rect x="${cx-bw*.26}" y="${H-h}" width="${bw*.52}" height="${h}" rx="6" class="${(d.some(y=>y.cur)?x.cur:i===lastI)?'a':'b'}"/><text x="${cx}" y="${H+15}" text-anchor="middle">${x.l}</text>${x.c?`<text class="v" x="${cx}" y="${H-h-5}" text-anchor="middle">${x.c}</text>`:''}`}).join('')}</svg>`}
 function line(d){const W=320,H=110,n=d.length,mx=Math.max(1,...d.map(x=>x.m)),pt=d.map((x,i)=>[14+i*(W-28)/(n-1),H-6-x.m/mx*(H-24)]),p=pt.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join('');
 return `<svg class="ch" viewBox="0 0 ${W} ${H+22}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--acc)" stop-opacity=".25"/><stop offset="1" stop-color="var(--acc)" stop-opacity="0"/></linearGradient></defs><path d="${p}L${pt[n-1][0]} ${H}L${pt[0][0]} ${H}Z" fill="url(#g)"/><path d="${p}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${pt.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="3.5" fill="var(--card)" stroke="var(--acc)" stroke-width="2"/><text x="${q[0]}" y="${H+15}" text-anchor="middle">${d[i].l}</text>`).join('')}</svg>`}
 function stats(){const sp=SP(),rg=range(),all=U.p==='all',inR=w=>{if(all)return true;const d=new Date(w.dt);return d>=rg.a&&d<rg.b};
@@ -373,8 +373,13 @@ function countUp(){if(typeof matchMedia!=='undefined'&&matchMedia('(prefers-redu
 function homeSnap(){const G=S.ws.filter(w=>w.k==='g'&&!w.up),pk=SP().pk,v=G.filter(w=>w.st&&w.st[pk]!=null),rec=G.some(w=>w.res)?[1,2,3].map(i=>G.filter(w=>w.res===i).length).join('-'):'-',av=v.length?(Math.round(v.reduce((x,w)=>x+w.st[pk],0)/v.length*10)/10).toFixed(1):'-';
 return `<div class="snap"><div><b>${G.length}</b><span>${t('games')}</span></div><div><b>${rec}</b><span>${t('record')}</span></div><div><b>${av}</b><span>${t(pk)+t('perG')}</span></div></div>`}
 const hav=w=>w.ha===1?t('home'):w.ha===2?t('away'):'',reqCount=()=>FR.filter(f=>f.status==='pending'&&f.from!==user.uid).length;
-function homeChart(){const sp=U.p;U.p=U.hp||'month';const b=buckets(S.ws.filter(w=>w.k==='g'&&!w.up));U.p=sp;
-return `<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>${t('games')}</h2><div class="seg" style="width:150px">${['month','year'].map(p=>`<button class="${(U.hp||'month')===p?'on':''}" data-a="hp" data-v="${p}">${t(p)}</button>`).join('')}</div></div>${bars(b)}</div>`}
+function homeSeries(p,o){const G=S.ws.filter(w=>w.k==='g'&&!w.up),now=new Date(),items=[];let label;
+if(p==='year'){const Y=now.getFullYear()+o;label=String(Y);for(let m=0;m<12;m++)items.push({l:fd(new Date(Y,m,1),{month:'numeric'}),c:G.filter(w=>{const x=new Date(w.dt);return x.getFullYear()===Y&&x.getMonth()===m}).length,cur:o===0&&m===now.getMonth()})}
+else{const a=new Date(now.getFullYear(),now.getMonth()+o,1),dim=new Date(a.getFullYear(),a.getMonth()+1,0).getDate();label=fd(a,{month:'long',year:'numeric'});for(let st=1;st<=dim;st+=7){const en=Math.min(st+6,dim);items.push({l:st+'–'+en,c:G.filter(w=>{const x=new Date(w.dt);return x.getFullYear()===a.getFullYear()&&x.getMonth()===a.getMonth()&&x.getDate()>=st&&x.getDate()<=en}).length,cur:o===0&&now.getDate()>=st&&now.getDate()<=en})}}
+if(o!==0){const mx=Math.max(...items.map(x=>x.c));if(mx>0){const k=items.findIndex(x=>x.c===mx);items[k].cur=true}}
+return{items,label}}
+function homeChart(){const p=U.hp||'month',o=Math.min(0,U.ho||0),{items,label}=homeSeries(p,o);
+return `<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>${t('games')}</h2><div class="seg" style="width:150px">${['month','year'].map(q=>`<button class="${p===q?'on':''}" data-a="hp" data-v="${q}">${t(q)}</button>`).join('')}</div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button class="ib" style="width:32px;height:32px" data-a="hpo" data-v="-1">${ic('back',16).replace('class="ic"','class="ic flip"')}</button><span class="sub" style="font-weight:600">${label}</span><button class="ib" style="width:32px;height:32px;${o>=0?'opacity:.3;pointer-events:none':''}" data-a="hpo" data-v="1">${ic('back',16).replace('class="ic"','class="ic flip2"')}</button></div>${bars(L()==='he'?[...items].reverse():items)}</div>`}
 const tabs=()=>`<nav class="tabs${U.nvA?' nv':''}">${[['home','home'],['cal','cal'],['friends','users'],['stats','chart'],['settings','sliders']].map(([v,i])=>`<button class="${U.v===v||(v==='friends'&&U.v==='friend')?'on':''}" data-a="nav" data-v="${v}">${ic(i,22)}${v==='friends'&&reqCount()?'<i class="dot"></i>':''}<span>${t(v)}</span></button>`).join('')}</nav>`;
 function render(anim){PRS=prSet();setTimeout(maybeBanner,400);setTimeout(()=>{if(U.v==='detail'&&user)loadPh();if(U.v==='friends'&&user)loadBoard()},0);const r=document.documentElement;r.lang=L();r.dir=L()==='he'?'rtl':'ltr';document.title=t('app');
 if(!init)return;if(!user){$('#app').innerHTML=authView();return}
@@ -404,7 +409,8 @@ document.addEventListener('input',e=>{if(e.target.id==='q'){U.q=e.target.value;c
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a],[data-id]');if(!b)return;const a=b.dataset.a,v=b.dataset.v;
 if(!a){U.id=b.dataset.id;U.back=U.v==='detail'?U.back:U.v;go('detail');return}
 switch(a){
-case'hp':U.hp=v;render();break;
+case'hp':U.hp=v;U.ho=0;render();break;
+case'hpo':U.ho=Math.min(0,(U.ho||0)+ +v);render();break;
 case'pk':U.pick={k:v};renderOv();break;
 case'pkx':U.pick=null;renderOv();break;
 case'sport':{const wasPick=U.pickSport;U.pick=null;S.sport=v;S.sportUid=user?user.uid:'';save();U.pickSport=false;U.f='all';U.p='all';U.q='';if(user){(PR[user.uid]=PR[user.uid]||{}).sport=v;setDoc(doc(db,'profiles',user.uid),{sport:v},{merge:true}).catch(()=>{})}refilter();go(wasPick?'home':'settings');renderOv();break}
